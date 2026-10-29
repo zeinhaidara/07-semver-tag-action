@@ -1,14 +1,26 @@
 name: Semver tag
-description: Work out the next version from conventional commits, update the changelog and tag it.
+description: Work out the next version from conventional commits, tag HEAD and publish release notes.
 inputs:
   dry-run:
-    description: Print the next version only. No changelog, tag or push.
+    description: Print the next version only. No tag, push or release.
     default: "false"
+  create-release:
+    description: Create a GitHub release from the release notes.
+    default: "true"
 runs:
   using: composite
   steps:
-    - name: Release
+    - name: Tag
+      id: tag
       shell: bash
       env:
         DRY_RUN: ${{ inputs.dry-run }}
       run: bash "${{ github.action_path }}/scripts/release.sh"
+    - name: Release
+      if: inputs.create-release == 'true' && inputs.dry-run != 'true' && steps.tag.outputs.version != ''
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+        VERSION: ${{ steps.tag.outputs.version }}
+        NOTES: ${{ steps.tag.outputs.notes }}
+      run: gh release create "$VERSION" --notes-file "$NOTES" --title "$VERSION"
