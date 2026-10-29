@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# Works out the next version from conventional commits, then tags it.
+# Works out the next version from conventional commits and tags HEAD.
 set -euo pipefail
 
 DRY_RUN="${DRY_RUN:-false}"
 
-# 1. Latest version tag (empty if there is none)
-last=$(git describe --tags --abbrev=0 --match "v[0-9]*.[0-9]*.[0-9]*" 2>/dev/null || true)
+# 1. Latest stable tag. Only vX.Y.Z counts, so v1.2.3-rc1 is ignored
+last=$(git tag --merged HEAD --list "v*" --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -n 1 || true)
 range="HEAD"
 [ -n "$last" ] && range="$last..HEAD"
 
@@ -52,21 +52,24 @@ else
 fi
 echo "$version"
 
-[ "$DRY_RUN" = "true" ] && exit 0
-
-# 5. Changelog, commit, tag, push the tag only
+# 5. Release notes go in a file, never in the repo history
+notes="${RUNNER_TEMP:-$PWD}/release-notes.md"
 section="## $version - $(date +%Y-%m-%d)"$'\n'
 [ -n "$breaking" ] && section+=$'\n'"### Breaking changes"$'\n'"$breaking"
 [ -n "$features" ] && section+=$'\n'"### Features"$'\n'"$features"
 [ -n "$fixes" ] && section+=$'\n'"### Fixes"$'\n'"$fixes"
+printf '%s' "$section" >"$notes"
+echo "$notes"
 
-old=""
-[ -f CHANGELOG.md ] && old=$(tail -n +3 CHANGELOG.md)
-printf '# Changelog\n\n%s\n%s\n' "$section" "$old" >CHANGELOG.md
+# The action reads these to create the GitHub release
+if [ -n "${GITHUB_OUTPUT:-}" ]; then
+  echo "version=$version" >>"$GITHUB_OUTPUT"
+  echo "notes=$notes" >>"$GITHUB_OUTPUT"
+fi
 
-git add CHANGELOG.md
-git -c user.name="github-actions" -c user.email="actions@users.noreply.github.com" \
-  commit -m "Release $version"
+[ "$DRY_RUN" = "true" ] && exit 0
+
+# 6. Tag the current HEAD and push the tag only
 git -c user.name="github-actions" -c user.email="actions@users.noreply.github.com" \
   tag -a "$version" -m "Release $version"
 git push origin "$version"
