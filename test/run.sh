@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Each case builds a throwaway repo and runs the script in dry-run mode.
+# Each case builds a throwaway repo. Most run the script in dry-run mode.
 set -euo pipefail
 
 script="$(cd "$(dirname "$0")/.." && pwd)/scripts/release.sh"
@@ -16,9 +16,10 @@ new_repo() {
 
 commit() { git commit -q --allow-empty -m "$1"; }
 
-# check <name> <expected output>
+# check <name> <expected first line of output>
 check() {
   got=$(DRY_RUN=true bash "$script")
+  got=${got%%$'\n'*} # first line only
   if [ "$got" = "$2" ]; then
     echo "ok   $1"
   else
@@ -54,5 +55,28 @@ check "no release-worthy type" "no release"
 new_repo
 commit "feat: first feature"
 check "no tags gives v0.1.0" "v0.1.0"
+
+tagged_repo
+commit "fix: handle empty input"
+git tag v1.3.0-rc1
+check "pre-release tag is ignored" "v1.2.4"
+
+# Push path: real run against a local bare origin
+origin=$(mktemp -d)
+git init -q --bare "$origin"
+new_repo
+git remote add origin "$origin"
+commit "feat: first feature"
+head_before=$(git rev-parse HEAD)
+count_before=$(git rev-list --count HEAD)
+bash "$script" >/dev/null 2>&1
+if git -C "$origin" tag | grep -qx v0.1.0 &&
+  [ "$(git rev-parse HEAD)" = "$head_before" ] &&
+  [ "$(git rev-list --count HEAD)" = "$count_before" ]; then
+  echo "ok   push tags HEAD, makes no commit"
+else
+  echo "FAIL push tags HEAD, makes no commit"
+  fails=$((fails + 1))
+fi
 
 [ "$fails" -eq 0 ]
