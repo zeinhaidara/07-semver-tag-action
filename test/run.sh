@@ -2,6 +2,9 @@
 # Each case builds a throwaway repo. Most run the script in dry-run mode.
 set -euo pipefail
 
+# CI sets these; the tests expect the script defaults
+unset RUNNER_TEMP GITHUB_OUTPUT
+
 script="$(cd "$(dirname "$0")/.." && pwd)/scripts/release.sh"
 
 # new_repo: empty repo in a temp folder, we cd into it
