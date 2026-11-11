@@ -1,2 +1,6 @@
 .instruction/
 release-notes.md
+*.tfplan
+__pycache__/
+*.pyc
+memory/

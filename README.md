@@ -1,4 +1,4 @@
-# semver-tag-action
+# Semantic-version tag action
 
 Manual version bumps drift, changelogs get skipped, and tags stop matching what shipped.
 This action reads your conventional commits, works out the next version, tags the
@@ -51,7 +51,7 @@ jobs:
 
 The start point is the latest stable tag like `v1.2.3`. With no tag, the first release is `v0.1.0`.
 
-## Limits
+## Known limitations
 
 - No pre-release tags. Tags like `v1.2.3-rc1` are ignored.
 - No release notes history in the repo.
