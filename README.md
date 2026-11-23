@@ -63,3 +63,10 @@ The start point is the latest stable tag like `v1.2.3`. With no tag, the first r
 ## Status
 
 Tested with shellcheck and a throwaway-repo test script only. Not yet run as an action in GitHub Actions.
+
+Run the same checks as CI:
+
+```sh
+shellcheck scripts/release.sh test/run.sh
+bash test/run.sh   # each case builds a throwaway git repo in a temp folder, mostly in dry-run mode
+```
